@@ -9,6 +9,28 @@ def ottieni_connessione():
     conn = sqlite3.connect(DB_NAME)
     # Abilita le foreign key (fondamentale per SQLite)
     conn.execute("PRAGMA foreign_keys = ON;")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS abitudini (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            descrizione TEXT,
+            importanza INTEGER DEFAULT 3,
+            data_creazione TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS log_giornaliero (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            abitudine_id INTEGER,
+            data TEXT,
+            completato INTEGER,
+            FOREIGN KEY (abitudine_id) REFERENCES abitudini (id) ON DELETE CASCADE,
+            UNIQUE(abitudine_id, data)
+        )
+    """)
+    conn.commit()
+    
     return conn
 
 def aggiungi_abitudine(nome, descrizione="",importanza=3):
