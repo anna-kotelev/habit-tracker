@@ -39,6 +39,10 @@ if st.session_state['success_flash']:
 df_abitudini = get_tutte_abitudini()
 df_log = get_log_abitudini()
 
+count_master = 0
+count_ottimo = 0
+count_strada = 0
+
 # Calcoliamo i dati dei traguardi prima di mostrare la tabella in alto
 daily_sum = pd.DataFrame()
 
@@ -51,6 +55,15 @@ if not df_abitudini.empty and not df_log.empty:
             daily_sum.columns = ['data', 'importanza_completata']
             daily_sum['Percentuale (%)'] = (daily_sum['importanza_completata'] / totale_importanza_sistema) * 100
 
+            # Conteggio cumulativo dei trofei ottenuti
+            for _, row in daily_sum.iterrows():
+                perc = row['Percentuale (%)']
+                if perc > 85:
+                    count_master += 1
+                elif perc > 60:
+                    count_ottimo += 1
+                elif perc > 50:
+                    count_strada += 1
 # ----------------------------------------------------
 # 2. TABELLA DEI TRAGUARDI GIORNALIERI (IN ALTO)
 # ----------------------------------------------------
