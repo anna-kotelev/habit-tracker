@@ -9,12 +9,29 @@ from backend import (
     get_log_abitudini,
     elimina_abitudine
 )
+import time
 
 # Configurazione della pagina Streamlit
 st.set_page_config(page_title="Habit Tracker Personale", page_icon="🎯", layout="wide")
 
 st.title("🎯 Il mio Habit Tracker")
 st.markdown("Monitora le tue abitudini con percentuali ponderate e traguardi giornalieri.")
+
+# Inizializzazione dello stato per il lampo di colore del pulsante
+if 'success_flash' not in st.session_state:
+    st.session_state['success_flash'] = False
+
+# Se il flag è attivo, iniettiamo il CSS per colorare di verde il pulsante del form
+if st.session_state['success_flash']:
+    st.markdown("""
+        <style>
+        [data-testid="stFormSubmitButton"] button {
+            background-color: #4CAF50 !important;
+            color: white !important;
+            border-color: #4CAF50 !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
 # ----------------------------------------------------
 # SIDEBAR: Aggiungi Nuova Abitudine
@@ -36,6 +53,12 @@ with st.sidebar.form("form_nuova_abitudine"):
                 # Passiamo l'importanza alla funzione del backend
                 aggiungi_abitudine(nome_abitudine, descrizione_abitudine, importanza_abitudine, scadenza_abitudine)
                 st.success(f"Abitudine '{nome_abitudine}' creata!")
+                
+                # 3. Mettiamo in pausa per 1 secondo esatto per mostrare il colore
+                time.sleep(1)
+            
+                # 4. Spegniamo lo stato e ricarichiamo la pagina
+                st.session_state['success_flash'] = False
                 st.rerun()
 
 
