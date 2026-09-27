@@ -6,7 +6,8 @@ from backend import (
     aggiungi_abitudine, 
     get_tutte_abitudini, 
     registra_log, 
-    get_log_abitudini
+    get_log_abitudini,
+    elimina_abitudine
 )
 
 # Configurazione della pagina Streamlit
@@ -23,6 +24,9 @@ with st.sidebar.form("form_nuova_abitudine"):
         nome_abitudine = st.text_input("Nome dell'abitudine (es. Bere 2L d'acqua)")
         descrizione_abitudine = st.text_area("Descrizione o obiettivo (facoltativo)")
         importanza_abitudine = st.slider("Grado di importanza (1-5)", min_value=1, max_value=5, value=3)
+        abilita_scadenza = st.checkbox("Imposta una data di scadenza")
+        scadenza_abitudine = st.date_input("Seleziona la data", min_value=date.today()) if abilita_scadenza else None
+    
         submit_abitudine = st.form_submit_button(label="Salva Nuova Abitudine")
         
         if submit_abitudine:
@@ -56,6 +60,21 @@ else:
     for _, abitudine in df_abitudini.iterrows():
         ab_id = abitudine['id']
         ab_nome = abitudine['nome']
+        scadenza = abitudine.get('scadenza', None)
+       
+        # 1. Calcolo del countdown
+        badge_scadenza = ""        
+        if pd.notna(scadenza) and scadenza:
+            # Assicuriamoci che la data sia in formato corretto
+            scadenza_date = pd.to_datetime(scadenza).date()
+            giorni_rimanenti = (scadenza_date - date.today()).days
+            
+            if giorni_rimanenti > 0:
+                badge_scadenza = f" ⏳ **-{giorni_rimanenti} giorni**"
+            elif giorni_rimanenti == 0:
+                badge_scadenza = " ⏳ **Scade oggi!**"
+            else:
+                badge_scadenza = " ⚠️ **Scaduta**"
         
         # Verifichiamo se l'abitudine è già spuntata oggi
         gia_completata = False
@@ -64,12 +83,29 @@ else:
             if not match.empty:
                 gia_completata = True
                 
-        # Mostriamo il checkbox interattivo
-        stato_attuale = st.checkbox(f"**{ab_nome}** ({abitudine['descrizione']})" if abitudine['descrizione'] else f"**{ab_nome}**", value=gia_completata, key=f"ab_{ab_id}")
+        # Formattazione dell'etichetta del checkbox
+        label_testo = f"**{ab_nome}**"
+        if descrizione:
+            label_testo += f" ({descrizione})"
+        label_testo += badge_scadenza
         
-        # Se lo stato cambia, aggiorniamo il database in tempo reale
-        valore_salvato = 1 if stato_attuale else 0
-        registra_log(ab_id, oggi_str, valore_salvato)
+        # Layout a colonne per separare Checkbox e Tasto Elimina
+        col_check, col_delete = st.columns([0.9, 0.1])
+        
+        with col_check:
+            stato_attuale = st.checkbox(label_testo, value=gia_completata, key=f"ab_{ab_id}")
+            
+            # Ottimizzazione: registra nel DB solo se c'è un cambiamento reale per evitare scritture inutili al refresh
+            if stato_attuale != gia_completata:
+                valore_salvato = 1 if stato_attuale else 0
+                registra_log(ab_id, oggi_str, valore_salvato)
+                st.rerun() # Forza un refresh per aggiornare statistiche in tempo reale
+
+        with col_delete:
+            # Pulsante per eliminare (usiamo un pop-up nativo se necessario, qui un tasto diretto)
+            if st.button("🗑️", key=f"del_{ab_id}", help="Elimina questa abitudine"):
+                elimina_abitudine(ab_id)
+                st.rerun()
 
     # ----------------------------------------------------
     # SEZIONE STATISTICHE E GRAFICI
