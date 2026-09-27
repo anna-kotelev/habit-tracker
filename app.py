@@ -60,6 +60,7 @@ else:
     for _, abitudine in df_abitudini.iterrows():
         ab_id = abitudine['id']
         ab_nome = abitudine['nome']
+        descrizione = abitudine.get('descrizione', None)
         scadenza = abitudine.get('scadenza', None)
        
         # 1. Calcolo del countdown
@@ -85,7 +86,7 @@ else:
                 
         # Formattazione dell'etichetta del checkbox
         label_testo = f"**{ab_nome}**"
-        if descrizione:
+        if pd.notna(descrizione) and str(descrizione).strip():
             label_testo += f" ({descrizione})"
         label_testo += badge_scadenza
         
