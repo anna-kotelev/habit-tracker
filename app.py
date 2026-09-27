@@ -32,6 +32,35 @@ if st.session_state['success_flash']:
         }
         </style>
     """, unsafe_allow_html=True)
+st.subheader("🏆 Tabella dei Traguardi Giornalieri")
+                
+traguardi_dict = {}
+for _, row in daily_sum.iterrows():
+    d = row['data']
+    perc = row['Percentuale (%)']
+    
+    master_emoji = ""
+    ottimo_emoji = ""
+    strada_emoji = ""
+
+    if perc > 85:
+        master_emoji = "⭐"
+    elif perc > 60:
+        ottimo_emoji = "🔥"
+    elif perc > 50:
+        strada_emoji = "💪​"
+
+    traguardi_dict[d] = {
+        "Master": master_emoji,
+        "Ottimo": ottimo_emoji,
+        "Sei sulla giusta strada": strada_emoji
+    }
+
+if traguardi_dict:
+    df_traguardi = pd.DataFrame(traguardi_dict)
+    st.dataframe(df_traguardi, use_container_width=True)
+else:
+    st.warning("Nessun traguardo registrato nel periodo.")
 
 # ----------------------------------------------------
 # SIDEBAR: Aggiungi Nuova Abitudine
@@ -187,32 +216,4 @@ else:
                     # Tabella dei Traguardi (Gamification)
                     st.markdown("---")
 
-                    st.subheader("🏆 Tabella dei Traguardi Giornalieri")
-                
-                    traguardi_dict = {}
-                    for _, row in daily_sum.iterrows():
-                        d = row['data']
-                        perc = row['Percentuale (%)']
-                        
-                        master_emoji = ""
-                        ottimo_emoji = ""
-                        strada_emoji = ""
-                
-                        if perc > 85:
-                            master_emoji = "⭐"
-                        elif perc > 60:
-                            ottimo_emoji = "🔥"
-                        elif perc > 50:
-                            strada_emoji = "💪​"
-                
-                        traguardi_dict[d] = {
-                            "Master": master_emoji,
-                            "Ottimo": ottimo_emoji,
-                            "Sei sulla giusta strada": strada_emoji
-                        }
-                
-                    if traguardi_dict:
-                        df_traguardi = pd.DataFrame(traguardi_dict)
-                        st.dataframe(df_traguardi, use_container_width=True)
-                    else:
-                        st.warning("Nessun traguardo registrato nel periodo.")
+                    
