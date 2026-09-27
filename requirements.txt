@@ -42,3 +42,4 @@ websockets==16.1.1
 
 matplotlib
 pandas
+streamlit
