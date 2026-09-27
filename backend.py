@@ -10,13 +10,15 @@ def ottieni_connessione():
     # Abilita le foreign key (fondamentale per SQLite)
     conn.execute("PRAGMA foreign_keys = ON;")
     cursor = conn.cursor()
+    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS abitudini (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             descrizione TEXT,
             importanza INTEGER DEFAULT 3,
-            data_creazione TEXT
+            data_creazione TEXT, 
+            scadenza TEXT
         )
     """)
     cursor.execute("""
@@ -24,7 +26,6 @@ def ottieni_connessione():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             abitudine_id INTEGER,
             data TEXT,
-            scadenza TEXT,
             completato INTEGER,
             FOREIGN KEY (abitudine_id) REFERENCES abitudini (id) ON DELETE CASCADE,
             UNIQUE(abitudine_id, data)
@@ -34,16 +35,19 @@ def ottieni_connessione():
     
     return conn
 
-def aggiungi_abitudine(nome, descrizione="",importanza=3, scadenza):
+def aggiungi_abitudine(nome, descrizione="",importanza, scadenza):
     """Inserisce una nuova abitudine nel database."""
     conn = ottieni_connessione()
     cursor = conn.cursor()
     oggi = date.today().strftime("%Y-%m-%d")
     
+    # Convertiamo l'oggetto 'date' di Streamlit in testo per SQLite (se non è None)
+    scadenza_str = scadenza.strftime("%Y-%m-%d") if scadenza else None
+    
     cursor.execute("""
-        INSERT INTO abitudini (nome, descrizione, importanza,data_creazione, scadenza)
-        VALUES (?, ?, ?,?, ?)
-    """, (nome, descrizione,importanza, oggi, scadenza))
+        INSERT INTO abitudini (nome, descrizione, importanza, data_creazione, scadenza)
+        VALUES (?, ?, ?, ?, ?)
+    """, (nome, descrizione, importanza, oggi, scadenza_str))
     
     conn.commit()
     conn.close()
@@ -83,15 +87,14 @@ def get_log_abitudini():
 
 
 def elimina_abitudine(abitudine_id):
-    import sqlite3
-    import os
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DB_NAME = os.path.join(BASE_DIR, "vocaboli_salvati.db") # O il nome del tuo DB
     
     conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    cursor = conn.cursor()
     # Elimina l'abitudine e i suoi log associati
-    c.execute("DELETE FROM abitudini WHERE id = ?", (abitudine_id,))
-    c.execute("DELETE FROM log_abitudini WHERE abitudine_id = ?", (abitudine_id,))
+    cursor.execute("DELETE FROM log_giornaliero WHERE abitudine_id = ?", (abitudine_id,))
+    cursor.execute("DELETE FROM abitudini WHERE id = ?", (abitudine_id,))
+    
     conn.commit()
     conn.close()
