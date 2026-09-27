@@ -7,7 +7,6 @@ DB_NAME = "habits.db"
 def ottieni_connessione():
     """Crea e restituisce una connessione attiva al database delle abitudini."""
     conn = sqlite3.connect(DB_NAME)
-    # Abilita le foreign key (fondamentale per SQLite)
     conn.execute("PRAGMA foreign_keys = ON;")
     cursor = conn.cursor()
     
@@ -17,10 +16,11 @@ def ottieni_connessione():
             nome TEXT NOT NULL,
             descrizione TEXT,
             importanza INTEGER DEFAULT 3,
-            data_creazione TEXT, 
+            data_creazione TEXT,
             scadenza TEXT
         )
     """)
+    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS log_giornaliero (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,16 +32,14 @@ def ottieni_connessione():
         )
     """)
     conn.commit()
-    
     return conn
 
-def aggiungi_abitudine(nome, descrizione="",importanza, scadenza):
+def aggiungi_abitudine(nome, descrizione, importanza, scadenza):
     """Inserisce una nuova abitudine nel database."""
     conn = ottieni_connessione()
     cursor = conn.cursor()
     oggi = date.today().strftime("%Y-%m-%d")
     
-    # Convertiamo l'oggetto 'date' di Streamlit in testo per SQLite (se non è None)
     scadenza_str = scadenza.strftime("%Y-%m-%d") if scadenza else None
     
     cursor.execute("""
@@ -64,7 +62,6 @@ def registra_log(abitudine_id, data_str, completato):
     conn = ottieni_connessione()
     cursor = conn.cursor()
     
-    # INSERT OR REPLACE sfrutta il vincolo UNIQUE per aggiornare lo stato se il log esiste già
     cursor.execute("""
         INSERT OR REPLACE INTO log_giornaliero (abitudine_id, data, completato)
         VALUES (?, ?, ?)
@@ -85,14 +82,11 @@ def get_log_abitudini():
     conn.close()
     return df
 
-
 def elimina_abitudine(abitudine_id):
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    DB_NAME = os.path.join(BASE_DIR, "vocaboli_salvati.db") # O il nome del tuo DB
-    
-    conn = sqlite3.connect(DB_NAME)
+    """Elimina un'abitudine e tutti i suoi log."""
+    conn = ottieni_connessione()
     cursor = conn.cursor()
-    # Elimina l'abitudine e i suoi log associati
+    
     cursor.execute("DELETE FROM log_giornaliero WHERE abitudine_id = ?", (abitudine_id,))
     cursor.execute("DELETE FROM abitudini WHERE id = ?", (abitudine_id,))
     
