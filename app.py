@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import date, timedelta
+import time
 from backend import (
     aggiungi_abitudine, 
     get_tutte_abitudini, 
@@ -9,7 +10,6 @@ from backend import (
     get_log_abitudini,
     elimina_abitudine
 )
-import time
 
 # Configurazione della pagina Streamlit
 st.set_page_config(page_title="Habit Tracker Personale", page_icon="🎯", layout="wide")
@@ -32,70 +32,88 @@ if st.session_state['success_flash']:
         }
         </style>
     """, unsafe_allow_html=True)
+
+# ----------------------------------------------------
+# 1. CARICAMENTO DATI E CALCOLO PREVENTIVO DEI TRAGUARDI
+# ----------------------------------------------------
+df_abitudini = get_tutte_abitudini()
+df_log = get_log_abitudini()
+
+# Calcoliamo i dati dei traguardi prima di mostrare la tabella in alto
+daily_sum = pd.DataFrame()
+
+if not df_abitudini.empty and not df_log.empty:
+    totale_importanza_sistema = df_abitudini['importanza'].sum()
+    if totale_importanza_sistema > 0:
+        df_comp = df_log[df_log['completato'] == 1]
+        if not df_comp.empty:
+            daily_sum = df_comp.groupby('data')['importanza'].sum().reset_index()
+            daily_sum.columns = ['data', 'importanza_completata']
+            daily_sum['Percentuale (%)'] = (daily_sum['importanza_completata'] / totale_importanza_sistema) * 100
+
+# ----------------------------------------------------
+# 2. TABELLA DEI TRAGUARDI GIORNALIERI (IN ALTO)
+# ----------------------------------------------------
 st.subheader("🏆 Tabella dei Traguardi Giornalieri")
-                
-traguardi_dict = {}
-for _, row in daily_sum.iterrows():
-    d = row['data']
-    perc = row['Percentuale (%)']
-    
-    master_emoji = ""
-    ottimo_emoji = ""
-    strada_emoji = ""
 
-    if perc > 85:
-        master_emoji = "⭐"
-    elif perc > 60:
-        ottimo_emoji = "🔥"
-    elif perc > 50:
-        strada_emoji = "💪​"
+if not daily_sum.empty:
+    traguardi_dict = {}
+    for _, row in daily_sum.iterrows():
+        d = row['data']
+        perc = row['Percentuale (%)']
+        
+        master_emoji = ""
+        ottimo_emoji = ""
+        strada_emoji = ""
 
-    traguardi_dict[d] = {
-        "Master": master_emoji,
-        "Ottimo": ottimo_emoji,
-        "Sei sulla giusta strada": strada_emoji
-    }
+        if perc > 85:
+            master_emoji = "⭐"
+        elif perc > 60:
+            ottimo_emoji = "🔥"
+        elif perc > 50:
+            strada_emoji = "💪"
 
-if traguardi_dict:
-    df_traguardi = pd.DataFrame(traguardi_dict)
+        traguardi_dict[d] = {
+            "Master": master_emoji,
+            "Ottimo": ottimo_emoji,
+            "Sei sulla giusta strada": strada_emoji
+        }
+
+    # Usiamo .T per trasporre la tabella e avere le date sulle righe (più leggibile)
+    df_traguardi = pd.DataFrame(traguardi_dict).T
     st.dataframe(df_traguardi, use_container_width=True)
 else:
-    st.warning("Nessun traguardo registrato nel periodo.")
+    st.info("Nessun traguardo ancora registrato. Completa le tue abitudini per vedere i tuoi progressi!")
+
+st.markdown("---")
 
 # ----------------------------------------------------
 # SIDEBAR: Aggiungi Nuova Abitudine
 # ----------------------------------------------------
 st.sidebar.header("➕ Nuova Abitudine")
 with st.sidebar.form("form_nuova_abitudine"):
-        nome_abitudine = st.text_input("Nome dell'abitudine (es. Bere 2L d'acqua)")
-        descrizione_abitudine = st.text_area("Descrizione o obiettivo (facoltativo)")
-        importanza_abitudine = st.slider("Grado di importanza (1-5)", min_value=1, max_value=5, value=3)
-        abilita_scadenza = st.checkbox("Imposta una data di scadenza")
-        scadenza_abitudine = st.date_input("Seleziona la data", min_value=date.today()) if abilita_scadenza else None
+    nome_abitudine = st.text_input("Nome dell'abitudine (es. Bere 2L d'acqua)")
+    descrizione_abitudine = st.text_area("Descrizione o obiettivo (facoltativo)")
+    importanza_abitudine = st.slider("Grado di importanza (1-5)", min_value=1, max_value=5, value=3)
+    abilita_scadenza = st.checkbox("Imposta una data di scadenza")
+    scadenza_abitudine = st.date_input("Seleziona la data", min_value=date.today()) if abilita_scadenza else None
     
-        submit_abitudine = st.form_submit_button(label="Salva Nuova Abitudine")
-        
-        if submit_abitudine:
-            if not nome_abitudine.strip():
-                st.error("Il nome dell'abitudine non può essere vuoto!")
-            else:
-                # Passiamo l'importanza alla funzione del backend
-                aggiungi_abitudine(nome_abitudine, descrizione_abitudine, importanza_abitudine, scadenza_abitudine)
-                st.success(f"Abitudine '{nome_abitudine}' creata!")
-                
-                # 3. Mettiamo in pausa per 1 secondo esatto per mostrare il colore
-                time.sleep(1)
-            
-                # 4. Spegniamo lo stato e ricarichiamo la pagina
-                st.session_state['success_flash'] = False
-                st.rerun()
-
+    submit_abitudine = st.form_submit_button(label="Salva Nuova Abitudine")
+    
+    if submit_abitudine:
+        if not nome_abitudine.strip():
+            st.error("Il nome dell'abitudine non può essere vuoto!")
+        else:
+            st.session_state['success_flash'] = True
+            aggiungi_abitudine(nome_abitudine, descrizione_abitudine, importanza_abitudine, scadenza_abitudine)
+            st.success(f"Abitudine '{nome_abitudine}' creata!")
+            time.sleep(1)
+            st.session_state['success_flash'] = False
+            st.rerun()
 
 # ----------------------------------------------------
 # AREA PRINCIPALE: Check-in Giornaliero
 # ----------------------------------------------------
-df_abitudini = get_tutte_abitudini()
-
 st.subheader("📅 Check-in di Oggi")
 
 if df_abitudini.empty:
@@ -104,21 +122,17 @@ else:
     oggi_str = date.today().strftime("%Y-%m-%d")
     st.write(f"Data odierna: **{oggi_str}** - Spunta le abitudini che hai completato oggi:")
 
-    # Recuperiamo i log esistenti per la data odierna
-    df_log = get_log_abitudini()
     log_oggi = df_log[df_log['data'] == oggi_str] if not df_log.empty else pd.DataFrame()
     
-    # Creiamo un form o dei checkbox interattivi per ogni abitudine
     for _, abitudine in df_abitudini.iterrows():
         ab_id = abitudine['id']
         ab_nome = abitudine['nome']
         descrizione = abitudine.get('descrizione', None)
         scadenza = abitudine.get('scadenza', None)
-       
-        # 1. Calcolo del countdown
+        
+        # Countdown scadenza
         badge_scadenza = ""        
         if pd.notna(scadenza) and scadenza:
-            # Assicuriamoci che la data sia in formato corretto
             scadenza_date = pd.to_datetime(scadenza).date()
             giorni_rimanenti = (scadenza_date - date.today()).days
             
@@ -136,26 +150,22 @@ else:
             if not match.empty:
                 gia_completata = True
                 
-        # Formattazione dell'etichetta del checkbox
         label_testo = f"**{ab_nome}**"
         if pd.notna(descrizione) and str(descrizione).strip():
             label_testo += f" ({descrizione})"
         label_testo += badge_scadenza
         
-        # Layout a colonne per separare Checkbox e Tasto Elimina
         col_check, col_delete = st.columns([0.9, 0.1])
         
         with col_check:
             stato_attuale = st.checkbox(label_testo, value=gia_completata, key=f"ab_{ab_id}")
             
-            # Ottimizzazione: registra nel DB solo se c'è un cambiamento reale per evitare scritture inutili al refresh
             if stato_attuale != gia_completata:
                 valore_salvato = 1 if stato_attuale else 0
                 registra_log(ab_id, oggi_str, valore_salvato)
-                st.rerun() # Forza un refresh per aggiornare statistiche in tempo reale
+                st.rerun()
 
         with col_delete:
-            # Pulsante per eliminare (usiamo un pop-up nativo se necessario, qui un tasto diretto)
             if st.button("🗑️", key=f"del_{ab_id}", help="Elimina questa abitudine"):
                 elimina_abitudine(ab_id)
                 st.rerun()
@@ -167,10 +177,8 @@ else:
     st.subheader("📊 Analisi e Storico Progressi")
     
     if not df_log.empty:
-        # Filtro temporale richiesto
         periodo = st.radio("Seleziona il periodo da visualizzare:", ["Ultimi 7 giorni", "Ultimi 30 giorni", "Tutto lo storico"], horizontal=True)
         
-        # Convertiamo la colonna data in formato datetime per filtrare correttamente
         df_log['data_dt'] = pd.to_datetime(df_log['data']).dt.date
         oggi = date.today()
         
@@ -191,20 +199,17 @@ else:
             if totale_importanza_sistema > 0:
                 df_comp = df_filtrato[df_filtrato['completato'] == 1]
                 
-                # [CORREZIONE] Controlliamo se ci sono abitudini completate nel periodo
                 if df_comp.empty:
                     st.warning("Nessuna abitudine completata nel periodo selezionato. Spunta qualche abitudine per vedere il grafico!")
                 else:
-                    daily_sum = df_comp.groupby('data')['importanza'].sum().reset_index()
-                    daily_sum.columns = ['data', 'importanza_completata']
+                    daily_sum_filtered = df_comp.groupby('data')['importanza'].sum().reset_index()
+                    daily_sum_filtered.columns = ['data', 'importanza_completata']
+                    daily_sum_filtered['Percentuale (%)'] = (daily_sum_filtered['importanza_completata'] / totale_importanza_sistema) * 100
                     
-                    daily_sum['Percentuale (%)'] = (daily_sum['importanza_completata'] / totale_importanza_sistema) * 100
-                    
-                    # Grafico a barre statico con Matplotlib
                     st.markdown("### Trend percentuale giornaliero")
                     
                     fig, ax = plt.subplots(figsize=(10, 4))
-                    ax.bar(daily_sum['data'].astype(str), daily_sum['Percentuale (%)'], color='#4CAF50', width=0.6)
+                    ax.bar(daily_sum_filtered['data'].astype(str), daily_sum_filtered['Percentuale (%)'], color='#4CAF50', width=0.6)
                     ax.set_xlabel("Giorni")
                     ax.set_ylabel("Percentuale (%)")
                     ax.set_ylim(0, 105)
@@ -212,8 +217,3 @@ else:
                     ax.grid(axis='y', linestyle='--', alpha=0.7)
                     
                     st.pyplot(fig)
-                    
-                    # Tabella dei Traguardi (Gamification)
-                    st.markdown("---")
-
-                    
