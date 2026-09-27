@@ -69,34 +69,30 @@ if not df_abitudini.empty and not df_log.empty:
 # ----------------------------------------------------
 st.subheader("🏆 Tabella dei Traguardi Giornalieri")
 
-if not daily_sum.empty:
-    traguardi_dict = {}
-    for _, row in daily_sum.iterrows():
-        d = row['data']
-        perc = row['Percentuale (%)']
-        
-        master_emoji = ""
-        ottimo_emoji = ""
-        strada_emoji = ""
+totale_trofei = count_master + count_ottimo + count_strada
 
-        if perc > 85:
-            master_emoji = "⭐"
-        elif perc > 60:
-            ottimo_emoji = "🔥"
-        elif perc > 50:
-            strada_emoji = "💪"
-
-        traguardi_dict[d] = {
-            "Master": master_emoji,
-            "Ottimo": ottimo_emoji,
-            "Sei sulla giusta strada": strada_emoji
+if totale_trofei > 0:
+    dati_traguardi = [
+        {
+            "Livello": "⭐ Master (>85%)",
+            "Sbloccati": count_master,
+            "Collezione Trofei": "⭐ " * count_master if count_master > 0 else "—"
+        },
+        {
+            "Livello": "🔥 Ottimo (>60%)",
+            "Sbloccati": count_ottimo,
+            "Collezione Trofei": "🔥 " * count_ottimo if count_ottimo > 0 else "—"
+        },
+        {
+            "Livello": "💪 Sei sulla giusta strada (>50%)",
+            "Sbloccati": count_strada,
+            "Collezione Trofei": "💪 " * count_strada if count_strada > 0 else "—"
         }
-
-    # Usiamo .T per trasporre la tabella e avere le date sulle righe (più leggibile)
-    df_traguardi = pd.DataFrame(traguardi_dict).T
-    st.dataframe(df_traguardi, use_container_width=True)
+    ]
+    df_traguardi = pd.DataFrame(dati_traguardi)
+    st.dataframe(df_traguardi, use_container_width=True, hide_index=True)
 else:
-    st.info("Nessun traguardo ancora registrato. Completa le tue abitudini per vedere i tuoi progressi!")
+    st.info("Nessun traguardo ancora sbloccato. Completa le tue abitudini per iniziare ad accumulare trofei!")
 
 st.markdown("---")
 
