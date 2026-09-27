@@ -33,8 +33,8 @@ with st.sidebar.form("form_nuova_abitudine"):
             if not nome_abitudine.strip():
                 st.error("Il nome dell'abitudine non può essere vuoto!")
             else:
-                # [MODIFICA 1] Passiamo l'importanza alla funzione del backend
-                aggiungi_abitudine(nome_abitudine, descrizione_abitudine, importanza_abitudine)
+                # Passiamo l'importanza alla funzione del backend
+                aggiungi_abitudine(nome_abitudine, descrizione_abitudine, importanza_abitudine, scadenza_abitudine)
                 st.success(f"Abitudine '{nome_abitudine}' creata!")
                 st.rerun()
 
