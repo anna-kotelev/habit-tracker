@@ -15,7 +15,7 @@ from backend import (
 st.set_page_config(page_title="Habit Tracker Personale", page_icon="🎯", layout="wide")
 
 st.title("🎯 Il mio Habit Tracker")
-st.markdown("Monitora le tue abitudini con percentuali ponderate e traguardi giornalieri.")
+st.markdown("Monitora le tue abitudini con percentuali ponderate e traguardi giornalieri. Per aggiungere abitudini premi >> in alto a sinistra")
 
 # Inizializzazione dello stato per il lampo di colore del pulsante
 if 'success_flash' not in st.session_state:
